@@ -1,11 +1,10 @@
-Package: cpLIB
+Package: generic_r
 Type: Package
-Title: What the Package Does (Title Case)
+Title: General-purpose R
 Version: 0.1.0
 Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Maintainer: The package maintainer <clode.paladini@gmail.com>
+Description: General-purpose R library for programming and analysis
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
