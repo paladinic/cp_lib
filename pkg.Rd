@@ -1,6 +1,6 @@
-\name{cpLIB}
+\name{generic_r}
 \alias{claudio paladini's library}
-\title{Personal R Library}
+\title{General-purposeR Library}
 
 \description{
 A set of standard functions useful in day to day analysis and programming.
