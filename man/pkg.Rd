@@ -1,4 +1,4 @@
-\name{generic_r}
+\name{generic}
 \alias{claudio paladini's library}
 \title{General-purpose R Library}
 
