@@ -1,110 +1,6 @@
-library(plotly)
+library(zoo)
 
-# CP LIB ------------------------------------------------------------------
-
-decomping = function(coefs, cats, dep_var, data) {
-  
-  vars = filter(select(coefs, variable), variable != "(Intercept)")
-  
-  dep_var_data = data %>%
-    select(date, !!sym(dep_var)) %>%
-    rename(actual = !!sym(dep_var))
-  
-  data = data %>%
-    select(vars$variable, date) %>%
-    mutate("(Intercept)" = 1) %>%
-    reshape2::melt(id.vars = "date")
-  
-  data = data %>%
-    mutate(variable = as.character(variable)) %>%
-    left_join(select(coefs, variable, Estimate), by = "variable")
-  
-  data = data %>%
-    mutate(contrib = Estimate * value)
-  
-  # no cats for now
-  cats = coefs %>%
-    select(variable) %>%
-    filter(variable != "(Intercept)") %>%
-    mutate(cats = variable,
-           calcs = "none") %>%
-    mutate_all(as.character())
-  
-  data = data %>%
-    left_join(cats, by = "variable") %>%
-    mutate(calcs = as.character(calcs)) %>%
-    mutate(calcs = if_else(is.na(calcs), "none", calcs)) %>%
-    mutate(cats = as.character(cats)) %>%
-    mutate(cats = if_else(is.na(cats), "Other", cats)) %>%
-    mutate(calcs = if_else(variable == "(Intercept)", "none", calcs)) %>%
-    mutate(cats = if_else(variable == "(Intercept)", "Base", cats))
-  
-  
-  data = data %>%
-    group_by(date, cats) %>%
-    summarise(contrib = sum(contrib))
-  
-  avm = data %>%
-    group_by(date) %>%
-    summarise(model = sum(contrib)) %>%
-    left_join(dep_var_data, by = "date") %>%
-    mutate(residual = actual - model)
-  
-  return(list(decomp = data,
-              avm = avm))
-}
-
-decomp_chart = function(decomp){
-  
-  decomp_data = decomp$decomp
-  avm_data = decomp$avm
-  
-
-  
-  plot_ly(
-    data = decomp_data,
-    y = ~contrib,
-    x = ~date,
-    color = ~cats,
-    type = 'bar'
-  ) %>%
-    add_trace(
-      data = avm_data,
-      x = ~date,
-      y = ~actual,
-      type = 'scatter',
-      mode = 'lines',
-      name = "actual"
-    ) %>%
-    layout(font = list(color = "white"),
-           yaxis = list(title = 'Contribution',
-                        zerolinecolor = "white",
-                        linecolor = toRGB("white")),
-           xaxis = list(zerolinecolor = "white",
-                        linecolor = toRGB("white")),
-           barmode = 'relative')%>% 
-    layout(plot_bgcolor='#2B3E50') %>% 
-    layout(paper_bgcolor='#2B3E50')
-  
-}
-
-
-
-avm_chart = function(decomp){
-  avm_data = decomp$avm %>% 
-    reshape2::melt(id.vars = "date")
-  
-  plot_ly(data = avm_data,type = "scatter",x = ~date,y = ~value,color = ~variable,mode = "lines")%>% 
-    layout(font = list(color = "white"),
-           yaxis = list(title = 'Contribution',
-                        zerolinecolor = "white",
-                        linecolor = toRGB("white")),
-           xaxis = list(zerolinecolor = "white",
-                        linecolor = toRGB("white")))%>% 
-    layout(plot_bgcolor='#2B3E50') %>% 
-    layout(paper_bgcolor='#2B3E50')
-  
-}
+# generic_r ------------------------------------------------------------------
 
 TRY = function(x){
   tryCatch(
@@ -113,28 +9,122 @@ TRY = function(x){
       NULL
   )}
 
-as_func = function(v, decay = 0){  if (decay == 0) {
+decay = function(v,decay){
+  if (decay == 0) {
     return(v)
-  } else{
+  }
+  else {
     stats::filter(v, decay, method = "recursive")
-  }}
-dr_func = function(v, m = max(v)){
-  m = as.numeric(as.character(m))
-  if(m == 0) {
-    return(v)
-  } else{
-    1 - base::exp(-v / m)
   }
 }
 
-# example of UNIX timestamp
-timestamp = 1551873597
-print(timestamp)
+diminish = function(v,m,abs=T){
+  m = as.numeric(as.character(m))
+  if (m == 0) {
+    return(v)
+  }
+  else {
+    1 - base::exp(-v/m)
+  }
+}
 
-# from time stamp to date
-date = as.Date(as.POSIXct(timestamp, origin="1970-01-01"))
-print(date)
+lag = function(v,l,zero=T){
+  
+  # if lag is zero, return original vector
+  if(l == 0){
+    return(v)
+  }
+  
+  # get the length of the vector
+  n = length(v)
+    
+  # if the lag is positive
+  if(l > 0){
+    
+    #move forward 
+    
+    # cut forward extremities
+    v = v[1:(n-l)]
+    
+    # if zero is TRUE
+    if(zero == T){
+      
+      v = c(rep(0,l),v)
+      
+    }else if(zero == F){
+      
+      v = c(rep(v[1],l),v)
+      
+    }
+  }
+  
+  if(l < 0){
+    
+    l = l*-1
+    
+    v = v[(l+1):n]
+    
+    if(zero == T){
+      
+      v = c(v,rep(0,l))
+      
+    }
+    else{
+      
+      v = c(v,rep(v[length(v)],l))
+      
+    }
+  }
+  
+  return(v)
+  
+}
 
-# from date to timestamp 
-unix_timestamp = as.integer(as.POSIXct(date))
-print(unix_timestamp)
+ma = function(v,width,align="center",fill=1){
+  
+  if(width == 0){
+    return(v)
+  }
+  
+  else{
+    
+    # fill options:
+    ## 0
+    ## 1 (extremes)
+    
+    if(fill == 0){
+      v = rollmean(v,width,fill = fill,align = align)
+    }
+    else if(fill == 1){
+      
+      fill = mean(v)
+      v = rollmean(v,width,fill = fill,align = align)
+      
+      #if right, left, center
+      # if odd or even
+      # if(align == "center"){}
+      # if(align == "left"){}
+      # if(align == "right"){}
+      # test_roll_mean = function(width,fill){
+      #   
+      #   df = data.frame(
+      #     v0 = mtcars$mpg,
+      #     vcenter = rollmean(mtcars$mpg,width,fill = fill,align = "center"),
+      #     vright = rollmean(mtcars$mpg,width,fill = fill,align = "right"),
+      #     vleft = rollmean(mtcars$mpg,width,fill = fill,align = "left"),
+      #     id = 1:32
+      #   ) %>% reshape2::melt(id.vars = "id")
+      #   
+      #   plot_ly() %>% 
+      #     add_lines(data = df,x = ~id,y = ~value,color = ~variable)
+      #   
+      # }
+      # 
+      # test_roll_mean(width = 5,fill = NA)
+      # 
+      
+    }
+  }
+  
+  return(v)
+}
