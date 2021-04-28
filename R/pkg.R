@@ -97,8 +97,10 @@ ma = function(v,width,align="center",fill=1){
     }
     else if(fill == 1){
       
-      fill = mean(v)
-      v = rollmean(v,width,fill = c(v[1],0,v[length(v)]),align = align)
+      v0 = rollmean(v,width,align = align)
+      fill = c(v0[1],0,v0[length(v0)])
+      v = rollmean(v,width,fill = fill,align = align)
+      
       
     }
   }
