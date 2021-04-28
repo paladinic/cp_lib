@@ -98,30 +98,7 @@ ma = function(v,width,align="center",fill=1){
     else if(fill == 1){
       
       fill = mean(v)
-      v = rollmean(v,width,fill = fill,align = align)
-      
-      #if right, left, center
-      # if odd or even
-      # if(align == "center"){}
-      # if(align == "left"){}
-      # if(align == "right"){}
-      # test_roll_mean = function(width,fill){
-      #   
-      #   df = data.frame(
-      #     v0 = mtcars$mpg,
-      #     vcenter = rollmean(mtcars$mpg,width,fill = fill,align = "center"),
-      #     vright = rollmean(mtcars$mpg,width,fill = fill,align = "right"),
-      #     vleft = rollmean(mtcars$mpg,width,fill = fill,align = "left"),
-      #     id = 1:32
-      #   ) %>% reshape2::melt(id.vars = "id")
-      #   
-      #   plot_ly() %>% 
-      #     add_lines(data = df,x = ~id,y = ~value,color = ~variable)
-      #   
-      # }
-      # 
-      # test_roll_mean(width = 5,fill = NA)
-      # 
+      v = rollmean(v,width,fill = c(v[1],0,v[length(v)]),align = align)
       
     }
   }
